@@ -1,7 +1,5 @@
 #include "GDL90.h"
 
-#include <stdio.h>
-
 typedef uint16_t gdl90_crc_t;
 
 static gdl90_crc_t GDL90_CRC[] = {
