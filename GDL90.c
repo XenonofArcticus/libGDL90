@@ -80,6 +80,10 @@ static gdl90_crc_t gdl90_crc(const gdl90_byte_t* buffer, gdl90_size_t size) {
 #define GDL90_ID_OWNSHIP_SIZE 0x0C /* 28 bytes */
 #define GDL90_ID_TRAFFIC 0x14
 #define GDL90_ID_TRAFFIC_SIZE 0x1C /* 28 bytes */
+#define GDL90_ID_STRATUX_HEARTBEAT0 0xCC
+#define GDL90_ID_STRATUX_HEARTBEAT1 0x5358
+#define GDL90_ID_STRATUX_AHRS 0x4C
+#define GDL90_ID_STRATUX_AHRS_SIZE 0x18 /* 24 bytes */
 
 struct _gdl90_t {
 	gdl90_int_t id;
@@ -159,6 +163,12 @@ gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size) {
 		if(gdl->data) gdl->id = GDL90_TRAFFIC;
 	}
 
+	else if(buffer[1] == GDL90_ID_STRATUX_AHRS) {
+		gdl->data = gdl90_create_data(buffer, GDL90_ID_STRATUX_AHRS_SIZE);
+
+		if(gdl->data) gdl->id = GDL90_STRATUX_AHRS;
+	}
+
 	return gdl;
 }
 
@@ -202,13 +212,41 @@ gdl90_float_t gdl90_longitude(const gdl90_t gdl) {
 	return gdl90_int24(&gdl->data[8]) * GDL90_LAT_LONG_INC;
 }
 
-gdl90_int_t gdl90_altitude(const gdl90_t gdl) {
+static gdl90_int_t gdl90_int16(const gdl90_byte_t* buffer) {
 	gdl90_int_t val = 0;
 
+	val += buffer[0] << 4;
+	val += (buffer[1] & 0xF0) >> 4;
+
+	return val;
+}
+
+gdl90_int_t gdl90_altitude(const gdl90_t gdl) {
 	if(gdl->id != GDL90_OWNSHIP || gdl->id != GDL90_TRAFFIC) return -1;
 
-	val += gdl->data[11] << 4;
-	val += (gdl->data[11] & 0xF0) >> 4;
+	return (gdl90_int16(&gdl->data[11]) * 25) - 1000;
+}
 
-	return (val * 25) - 1000;
+gdl90_int_t gdl90_ahrs_yaw(const gdl90_t gdl) {
+	if(gdl->id != GDL90_STRATUX_AHRS) return 0;
+
+	return gdl90_int16(&gdl->data[12]);
+}
+
+gdl90_int_t gdl90_ahrs_pitch(const gdl90_t gdl) {
+	if(gdl->id != GDL90_STRATUX_AHRS) return 0;
+
+	return gdl90_int16(&gdl->data[6]);
+}
+
+gdl90_int_t gdl90_ahrs_roll(const gdl90_t gdl) {
+	if(gdl->id != GDL90_STRATUX_AHRS) return 0;
+
+	return gdl90_int16(&gdl->data[4]);
+}
+
+gdl90_int_t gdl90_ahrs_heading(const gdl90_t gdl) {
+	if(gdl->id != GDL90_STRATUX_AHRS) return 0;
+
+	return gdl90_int16(&gdl->data[8]);
 }

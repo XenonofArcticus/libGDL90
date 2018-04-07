@@ -18,6 +18,7 @@ typedef float gdl90_float_t;
 #define GDL90_OWNSHIP 0x0002
 #define GDL90_GEOMTRIC 0x0004
 #define GDL90_TRAFFIC 0x0008
+#define GDL90_STRATUX_AHRS 0x0010
 
 #define GDL90_TRUE 1
 #define GDL90_FALSE 0
@@ -30,5 +31,10 @@ gdl90_id_t gdl90_id(const gdl90_t gdl);
 gdl90_float_t gdl90_lattitude(const gdl90_t gdl);
 gdl90_float_t gdl90_longitude(const gdl90_t gdl);
 gdl90_int_t gdl90_altitude(const gdl90_t gdl);
+
+gdl90_int_t gdl90_ahrs_yaw(const gdl90_t gdl);
+gdl90_int_t gdl90_ahrs_pitch(const gdl90_t gdl);
+gdl90_int_t gdl90_ahrs_roll(const gdl90_t gdl);
+gdl90_int_t gdl90_ahrs_heading(const gdl90_t gdl);
 
 #endif
