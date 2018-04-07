@@ -1,5 +1,8 @@
 #include "GDL90.h"
 
+#include <string.h>
+#include <float.h>
+
 typedef uint16_t gdl90_crc_t;
 
 static gdl90_crc_t GDL90_CRC[] = {
@@ -70,31 +73,62 @@ static gdl90_crc_t gdl90_crc(const gdl90_byte_t* buffer, gdl90_size_t size) {
 
 #define GDL90_FLAGBYTE 0x7E
 #define GDL90_ID_HEARTBEAT 0x00
+#define GDL90_ID_HEARTBEAT_SIZE 0x07
 #define GDL90_ID_UPLINK_DATA 0x07
+#define GDL90_ID_UPLINK_DATA_SIZE 0x01BF /* 436 bytes */
 #define GDL90_ID_OWNSHIP 0x0A
+#define GDL90_ID_OWNSHIP_SIZE 0x0C /* 28 bytes */
 #define GDL90_ID_TRAFFIC 0x14
+#define GDL90_ID_TRAFFIC_SIZE 0x1C /* 28 bytes */
 
 struct _gdl90_t {
 	gdl90_int_t id;
-
-	void* data;
+	gdl90_byte_t* data;
+	/* TODO: Add gdl90_err_t for error reporting. */
 };
 
+#if 0
 typedef struct _gdl90_heartbeat_t {
 	gdl90_byte_t id;
-	gdl90_byte_t status1;
-	gdl90_byte_t status2;
-	gdl90_byte_t time_stamp[2];
-	gdl90_byte_t msg_counts[2];
+
+	struct {
+		gdl90_bit_t uat_init : 1;
+		gdl90_bit_t _res0 : 1;
+		gdl90_bit_t ratcs : 1;
+		gdl90_bit_t gps_batt_low : 1;
+		gdl90_bit_t addr_type : 1;
+		gdl90_bit_t ident : 1;
+		gdl90_bit_t maint_req : 1;
+		gdl90_bit_t gps_valid : 1;
+	} status1;
+
+	struct {
+		gdl90_bit_t utc_ok : 1;
+		gdl90_bit_t _res0 : 1;
+		gdl90_bit_t _res1 : 1;
+		gdl90_bit_t _res2 : 1;
+		gdl90_bit_t _res3 : 1;
+		gdl90_bit_t csa_not_avail : 1;
+		gdl90_bit_t csa_req : 1;
+		gdl90_bit_t time_stamp : 1;
+	} status2;
 } gdl90_heartbeat_t;
 
-static gdl90_heartbeat_t* gdl90_heartbeat_create(const gdl90_byte_t* data) {
-	gdl90_heartbeat_t* hb = NULL;
-	gdl90_crc_t crc = *((gdl90_crc_t*)(&data[7]));
+/* Status Type Address Latitude Longitude Altitude Misc NavIntegrityCat NavAccuracyCat
+ * HVelocity VVelocity TrackHeading EmitterCat CallSign Code */
+#endif
 
-	if(crc == gdl90_crc(data, 7)) hb = malloc(sizeof(gdl90_heartbeat_t));
+static gdl90_byte_t* gdl90_create_data(const gdl90_byte_t* buffer, gdl90_size_t size) {
+	gdl90_byte_t* data = NULL;
+	gdl90_crc_t crc = *((gdl90_crc_t*)(&buffer[size + 1]));
 
-	return hb;
+	if(crc == gdl90_crc(&buffer[1], size)) {
+		data = malloc(size);
+
+		memcpy(data, &buffer[1], size);
+	}
+
+	return data;
 }
 
 gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size) {
@@ -108,9 +142,21 @@ gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size) {
 	gdl->data = NULL;
 
 	if(buffer[1] == GDL90_ID_HEARTBEAT) {
-		gdl->data = gdl90_heartbeat_create(&buffer[1]);
+		gdl->data = gdl90_create_data(buffer, GDL90_ID_HEARTBEAT_SIZE);
 
 		if(gdl->data) gdl->id = GDL90_HEARTBEAT;
+	}
+
+	else if(buffer[1] == GDL90_ID_OWNSHIP) {
+		gdl->data = gdl90_create_data(buffer, GDL90_ID_OWNSHIP_SIZE);
+
+		if(gdl->data) gdl->id = GDL90_OWNSHIP;
+	}
+
+	else if(buffer[1] == GDL90_ID_TRAFFIC) {
+		gdl->data = gdl90_create_data(buffer, GDL90_ID_TRAFFIC_SIZE);
+
+		if(gdl->data) gdl->id = GDL90_TRAFFIC;
 	}
 
 	return gdl;
@@ -124,4 +170,45 @@ void gdl90_destroy(gdl90_t gdl) {
 
 gdl90_id_t gdl90_id(const gdl90_t gdl) {
 	return gdl->id;
+}
+
+static gdl90_int_t gdl90_uint24(const gdl90_byte_t* buffer) {
+	gdl90_byte_t b0 = buffer[0];
+	gdl90_byte_t b1 = buffer[1];
+	gdl90_byte_t b2 = buffer[2];
+
+	return (b0 << 16) + (b1 << 8) + b2;
+}
+
+static gdl90_int_t gdl90_int24(const gdl90_byte_t* buffer) {
+	gdl90_int_t val = gdl90_uint24(buffer);
+
+	if(val > 8388607) val -= 16777216;
+
+	return val;
+}
+
+#define GDL90_LAT_LONG_INC (180.0f / 8388608.0f)
+
+gdl90_float_t gdl90_lattitude(const gdl90_t gdl) {
+	if(gdl->id != GDL90_OWNSHIP || gdl->id != GDL90_TRAFFIC) return FLT_MAX;
+
+	return gdl90_int24(&gdl->data[5]) * GDL90_LAT_LONG_INC;
+}
+
+gdl90_float_t gdl90_longitude(const gdl90_t gdl) {
+	if(gdl->id != GDL90_OWNSHIP || gdl->id != GDL90_TRAFFIC) return FLT_MAX;
+
+	return gdl90_int24(&gdl->data[8]) * GDL90_LAT_LONG_INC;
+}
+
+gdl90_int_t gdl90_altitude(const gdl90_t gdl) {
+	gdl90_int_t val = 0;
+
+	if(gdl->id != GDL90_OWNSHIP || gdl->id != GDL90_TRAFFIC) return -1;
+
+	val += gdl->data[11] << 4;
+	val += (gdl->data[11] & 0xF0) >> 4;
+
+	return (val * 25) - 1000;
 }
