@@ -22,8 +22,6 @@ typedef float gdl90_float_t;
 #define GDL90_TRUE 1
 #define GDL90_FALSE 0
 
-void gdl90_init();
-
 gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size);
 void gdl90_destroy(gdl90_t gdl);
 
