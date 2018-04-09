@@ -28,7 +28,7 @@ void gdl90_destroy(gdl90_t gdl);
 
 gdl90_id_t gdl90_id(const gdl90_t gdl);
 
-gdl90_float_t gdl90_lattitude(const gdl90_t gdl);
+gdl90_float_t gdl90_latitude(const gdl90_t gdl);
 gdl90_float_t gdl90_longitude(const gdl90_t gdl);
 gdl90_int_t gdl90_altitude(const gdl90_t gdl);
 

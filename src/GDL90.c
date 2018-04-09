@@ -71,13 +71,16 @@ static gdl90_crc_t gdl90_crc(const gdl90_byte_t* buffer, gdl90_size_t size) {
 	return crc;
 }
 
+/* The *_SIZE values are the size of the unescaped data payload MINUS the leading FLAGBYTE, the
+ * two ending CRC bytes, and the final, closing FLAGBYTE. */
 #define GDL90_FLAGBYTE 0x7E
+#define GDL90_ESCAPEBYTE 0x7D
 #define GDL90_ID_HEARTBEAT 0x00
 #define GDL90_ID_HEARTBEAT_SIZE 0x07
 #define GDL90_ID_UPLINK_DATA 0x07
 #define GDL90_ID_UPLINK_DATA_SIZE 0x01BF /* 436 bytes */
 #define GDL90_ID_OWNSHIP 0x0A
-#define GDL90_ID_OWNSHIP_SIZE 0x0C /* 28 bytes */
+#define GDL90_ID_OWNSHIP_SIZE 0x1C /* 28 bytes */
 #define GDL90_ID_TRAFFIC 0x14
 #define GDL90_ID_TRAFFIC_SIZE 0x1C /* 28 bytes */
 #define GDL90_ID_STRATUX_HEARTBEAT0 0xCC
@@ -122,14 +125,38 @@ typedef struct _gdl90_heartbeat_t {
  * HVelocity VVelocity TrackHeading EmitterCat CallSign Code */
 #endif
 
-static gdl90_byte_t* gdl90_create_data(const gdl90_byte_t* buffer, gdl90_size_t size) {
-	gdl90_byte_t* data = NULL;
-	gdl90_crc_t crc = *((gdl90_crc_t*)(&buffer[size + 1]));
+/* Processes a buffer of data according to section 2.2.1 of the spec. The "byte-stuffed" characters
+ * are removed and a CRC (FCS) is performed on the resultant, cleared data. */
+static gdl90_byte_t* gdl90_create_data(
+	const gdl90_byte_t* buffer,
+	gdl90_size_t size,
+	gdl90_size_t id_size
+) {
+	gdl90_byte_t* data = malloc(id_size);
+	gdl90_crc_t crc = *((gdl90_crc_t*)(&buffer[size - 3]));
+	gdl90_size_t i = 0;
+	gdl90_size_t c = 0;
 
-	if(crc == gdl90_crc(&buffer[1], size)) {
-		data = malloc(size);
+	/* If a FLAGBYTE or ESCAPEBYTE is included in the payload, this process will extract them
+	 * properly using the technique described in the spec on page 5. */
+	while(i < size) {
+		if(buffer[1 + i] == GDL90_ESCAPEBYTE) {
+			data[c] = buffer[2 + i] ^ 0x20;
 
-		memcpy(data, &buffer[1], size);
+			i++;
+		}
+
+		else data[c] = buffer[1 + i];
+
+		i++;
+		c++;
+	}
+
+	/* If the CRC fails, free the allocated memory and set the returned pointer to NULL. */
+	if(crc != gdl90_crc(data, id_size)) {
+		free(data);
+
+		data = NULL;
 	}
 
 	return data;
@@ -146,25 +173,25 @@ gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size) {
 	gdl->data = NULL;
 
 	if(buffer[1] == GDL90_ID_HEARTBEAT) {
-		gdl->data = gdl90_create_data(buffer, GDL90_ID_HEARTBEAT_SIZE);
+		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_HEARTBEAT_SIZE);
 
 		if(gdl->data) gdl->id = GDL90_HEARTBEAT;
 	}
 
 	else if(buffer[1] == GDL90_ID_OWNSHIP) {
-		gdl->data = gdl90_create_data(buffer, GDL90_ID_OWNSHIP_SIZE);
+		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_OWNSHIP_SIZE);
 
 		if(gdl->data) gdl->id = GDL90_OWNSHIP;
 	}
 
 	else if(buffer[1] == GDL90_ID_TRAFFIC) {
-		gdl->data = gdl90_create_data(buffer, GDL90_ID_TRAFFIC_SIZE);
+		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_TRAFFIC_SIZE);
 
 		if(gdl->data) gdl->id = GDL90_TRAFFIC;
 	}
 
 	else if(buffer[1] == GDL90_ID_STRATUX_AHRS) {
-		gdl->data = gdl90_create_data(buffer, GDL90_ID_STRATUX_AHRS_SIZE);
+		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_STRATUX_AHRS_SIZE);
 
 		if(gdl->data) gdl->id = GDL90_STRATUX_AHRS;
 	}
@@ -198,33 +225,45 @@ static gdl90_int_t gdl90_int24(const gdl90_byte_t* buffer) {
 	return val;
 }
 
-#define GDL90_LAT_LONG_INC (180.0f / 8388608.0f)
+static gdl90_int_t gdl90_uint16(const gdl90_byte_t* buffer) {
+	gdl90_byte_t b0 = buffer[0];
+	gdl90_byte_t b1 = buffer[1];
 
-gdl90_float_t gdl90_lattitude(const gdl90_t gdl) {
-	if(gdl->id != GDL90_OWNSHIP || gdl->id != GDL90_TRAFFIC) return FLT_MAX;
-
-	return gdl90_int24(&gdl->data[5]) * GDL90_LAT_LONG_INC;
-}
-
-gdl90_float_t gdl90_longitude(const gdl90_t gdl) {
-	if(gdl->id != GDL90_OWNSHIP || gdl->id != GDL90_TRAFFIC) return FLT_MAX;
-
-	return gdl90_int24(&gdl->data[8]) * GDL90_LAT_LONG_INC;
+	return (b0 << 8) + b1;
 }
 
 static gdl90_int_t gdl90_int16(const gdl90_byte_t* buffer) {
-	gdl90_int_t val = 0;
+	gdl90_int_t val = gdl90_uint16(buffer);
 
-	val += buffer[0] << 4;
-	val += (buffer[1] & 0xF0) >> 4;
+	if(val > 32767) val -= 65536;
 
 	return val;
 }
 
-gdl90_int_t gdl90_altitude(const gdl90_t gdl) {
-	if(gdl->id != GDL90_OWNSHIP || gdl->id != GDL90_TRAFFIC) return -1;
+#define GDL90_LAT_LONG_RES (180.0f / 8388608.0f)
 
-	return (gdl90_int16(&gdl->data[11]) * 25) - 1000;
+gdl90_float_t gdl90_latitude(const gdl90_t gdl) {
+	if(gdl->id != GDL90_OWNSHIP && gdl->id != GDL90_TRAFFIC) return FLT_MAX;
+
+	return gdl90_int24(&gdl->data[5]) * GDL90_LAT_LONG_RES;
+}
+
+gdl90_float_t gdl90_longitude(const gdl90_t gdl) {
+	if(gdl->id != GDL90_OWNSHIP && gdl->id != GDL90_TRAFFIC) return FLT_MAX;
+
+	return gdl90_int24(&gdl->data[8]) * GDL90_LAT_LONG_RES;
+}
+
+gdl90_int_t gdl90_altitude(const gdl90_t gdl) {
+	gdl90_int_t val = 0;
+
+	if(gdl->id == GDL90_OWNSHIP || gdl->id != GDL90_TRAFFIC) {
+		val += gdl->data[11] << 4;
+		val += (gdl->data[12] & 0xF0) >> 4;
+		val = (val * 25) - 1000;
+	}
+
+	return val;
 }
 
 gdl90_int_t gdl90_ahrs_yaw(const gdl90_t gdl) {
