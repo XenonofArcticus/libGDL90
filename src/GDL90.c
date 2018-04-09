@@ -139,7 +139,7 @@ static gdl90_byte_t* gdl90_create_data(
 
 	/* If a FLAGBYTE or ESCAPEBYTE is included in the payload, this process will extract them
 	 * properly using the technique described in the spec on page 5. */
-	while(i < size) {
+	while(i < size - 4) {
 		if(buffer[1 + i] == GDL90_ESCAPEBYTE) {
 			data[c] = buffer[2 + i] ^ 0x20;
 

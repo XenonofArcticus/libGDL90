@@ -19,6 +19,7 @@ typedef float gdl90_float_t;
 #define GDL90_GEOMTRIC 0x0004
 #define GDL90_TRAFFIC 0x0008
 #define GDL90_STRATUX_AHRS 0x0010
+#define GDL90_STRATUX_AHRS_INVALID 0x7FFF
 
 #define GDL90_TRUE 1
 #define GDL90_FALSE 0
