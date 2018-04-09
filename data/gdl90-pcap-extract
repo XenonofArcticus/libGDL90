@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+import sys
+
+GDL90_FLAGBYTE = 0x7E
+
+data = open(sys.argv[1], "rb").read()
+c = 0
+
+while c < len(data):
+    if data[c] == GDL90_FLAGBYTE and data[c + 1] == int(sys.argv[2], 16):
+        i = 1
+        msg = bytearray((GDL90_FLAGBYTE,))
+
+        while data[c + i] != GDL90_FLAGBYTE:
+            msg.append(data[c + i])
+
+            c += 1
+
+        msg.append(GDL90_FLAGBYTE)
+
+        fmt = "{ %d, \"" % len(msg)
+        fmt += ("\\x%02X" * len(msg)) % tuple(msg)
+        fmt += "\" },"
+
+        print(fmt)
+
+    c += 1
