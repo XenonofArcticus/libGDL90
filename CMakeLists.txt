@@ -42,3 +42,6 @@ TARGET_LINK_LIBRARIES(gdl90-test-heartbeat libGDL90)
 
 ADD_EXECUTABLE(gdl90-test-ownship "test/test-ownship.c")
 TARGET_LINK_LIBRARIES(gdl90-test-ownship libGDL90)
+
+ADD_EXECUTABLE(gdl90-test-ahrs "test/test-ahrs.c")
+TARGET_LINK_LIBRARIES(gdl90-test-ahrs libGDL90)

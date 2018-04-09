@@ -3,8 +3,10 @@
 import sys
 
 GDL90_FLAGBYTE = 0x7E
+GDL90_EVERY_N = 1000
 
 data = open(sys.argv[1], "rb").read()
+n = 0
 c = 0
 
 while c < len(data):
@@ -19,10 +21,13 @@ while c < len(data):
 
         msg.append(GDL90_FLAGBYTE)
 
-        fmt = "{ %d, \"" % len(msg)
-        fmt += ("\\x%02X" * len(msg)) % tuple(msg)
-        fmt += "\" },"
+        if not n % GDL90_EVERY_N:
+            fmt = "{ %d, \"" % len(msg)
+            fmt += ("\\x%02X" * len(msg)) % tuple(msg)
+            fmt += "\" },"
 
-        print(fmt)
+            print(fmt)
+
+        n += 1
 
     c += 1
