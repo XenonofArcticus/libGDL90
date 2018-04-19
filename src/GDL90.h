@@ -54,7 +54,12 @@ gdl90_id_t gdl90_id(const gdl90_t gdl);
 
 /* Returns the numeric index of the first GDL90_FLAGBYTE detected in the specified buffer, starting
  * at the indicated @offset. Returns GDL90_SIZE_INVALID if none are detected. */
-gdl90_size_t gdl90_flagbyte(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_size_t offset);
+gdl90_size_t gdl90_flagbyte(
+	const gdl90_byte_t* buffer,
+	gdl90_size_t size,
+	gdl90_size_t offset,
+	gdl90_id_t ids
+);
 
 gdl90_float_t gdl90_latitude(const gdl90_t gdl);
 gdl90_float_t gdl90_longitude(const gdl90_t gdl);

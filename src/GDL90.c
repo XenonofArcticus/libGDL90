@@ -211,22 +211,6 @@ gdl90_t gdl90_create_buffer(
 	if((start = gdl90_flagbyte(buffer, size, *offset)) != GDL90_SIZE_INVALID) {
 		gdl90_size_t end;
 
-		/* if(start + 1 <= size) return NULL;
-
-		switch(buffer[start + 1]) {
-			case GDL90_ID_HEARTBEAT:
-			case GDL90_ID_UPLINK_DATA:
-			case GDL90_ID_OWNSHIP:
-			case GDL90_ID_TRAFFIC:
-			case GDL90_ID_STRATUX_HEARTBEAT0:
-			case GDL90_ID_STRATUX_HEARTBEAT1:
-			case GDL90_ID_STRATUX_AHRS:
-				continue;
-
-			default:
-				return NULL:
-		} */
-
 		if((end = gdl90_flagbyte(buffer, size, start + 1)) != GDL90_SIZE_INVALID) {
 			*offset = end + 1;
 
@@ -243,13 +227,35 @@ void gdl90_destroy(gdl90_t gdl) {
 	free(gdl);
 }
 
-gdl90_size_t gdl90_flagbyte(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_size_t offset) {
+gdl90_size_t gdl90_flagbyte(
+	const gdl90_byte_t* buffer,
+	gdl90_size_t size,
+	gdl90_size_t offset,
+	gdl90_id_t ids
+) {
 	gdl90_size_t i = 0;
 
 	while(GDL90_TRUE) {
-		if(offset + i >= size) return GDL90_SIZE_INVALID;
+		if(offset + i >= size) break;
 
-		if(buffer[offset + i] == GDL90_FLAGBYTE) return offset + i;
+		if(buffer[offset + i] == GDL90_FLAGBYTE) {
+			gdl90_byte_t b;
+
+			if(ids == GDL90_FALSE) return offset + i;
+
+			if(offset + i + 1 >= size) break;
+
+			b = buffer[offset + i + 1];
+
+			if(
+				(b == GDL90_ID_HEARTBEAT && (ids & GDL90_HEARTBEAT)) ||
+			case GDL90_ID_UPLINK_DATA:
+			case GDL90_ID_OWNSHIP:
+			case GDL90_ID_TRAFFIC:
+			case GDL90_ID_STRATUX_HEARTBEAT0:
+			case GDL90_ID_STRATUX_HEARTBEAT1:
+			case GDL90_ID_STRATUX_AHRS:
+		}
 
 		i++;
 	}
