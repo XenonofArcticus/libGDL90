@@ -94,34 +94,6 @@ struct _gdl90_t {
 	/* TODO: Add gdl90_err_t for error reporting. */
 };
 
-#if 0
-typedef struct _gdl90_heartbeat_t {
-	gdl90_byte_t id;
-
-	struct {
-		gdl90_bit_t uat_init : 1;
-		gdl90_bit_t _res0 : 1;
-		gdl90_bit_t ratcs : 1;
-		gdl90_bit_t gps_batt_low : 1;
-		gdl90_bit_t addr_type : 1;
-		gdl90_bit_t ident : 1;
-		gdl90_bit_t maint_req : 1;
-		gdl90_bit_t gps_valid : 1;
-	} status1;
-
-	struct {
-		gdl90_bit_t utc_ok : 1;
-		gdl90_bit_t _res0 : 1;
-		gdl90_bit_t _res1 : 1;
-		gdl90_bit_t _res2 : 1;
-		gdl90_bit_t _res3 : 1;
-		gdl90_bit_t csa_not_avail : 1;
-		gdl90_bit_t csa_req : 1;
-		gdl90_bit_t time_stamp : 1;
-	} status2;
-} gdl90_heartbeat_t;
-#endif
-
 /* Processes a buffer of data according to section 2.2.1 of the spec. The "byte-stuffed" characters
  * are removed and a CRC (FCS) is performed on the resultant, cleared data. */
 static gdl90_byte_t* gdl90_create_data(
