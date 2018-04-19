@@ -211,6 +211,22 @@ gdl90_t gdl90_create_buffer(
 	if((start = gdl90_flagbyte(buffer, size, *offset)) != GDL90_SIZE_INVALID) {
 		gdl90_size_t end;
 
+		/* if(start + 1 <= size) return NULL;
+
+		switch(buffer[start + 1]) {
+			case GDL90_ID_HEARTBEAT:
+			case GDL90_ID_UPLINK_DATA:
+			case GDL90_ID_OWNSHIP:
+			case GDL90_ID_TRAFFIC:
+			case GDL90_ID_STRATUX_HEARTBEAT0:
+			case GDL90_ID_STRATUX_HEARTBEAT1:
+			case GDL90_ID_STRATUX_AHRS:
+				continue;
+
+			default:
+				return NULL:
+		} */
+
 		if((end = gdl90_flagbyte(buffer, size, start + 1)) != GDL90_SIZE_INVALID) {
 			*offset = end + 1;
 
@@ -231,14 +247,14 @@ gdl90_size_t gdl90_flagbyte(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90
 	gdl90_size_t i = 0;
 
 	while(GDL90_TRUE) {
-		if(offset + i >= size) return -1;
+		if(offset + i >= size) return GDL90_SIZE_INVALID;
 
 		if(buffer[offset + i] == GDL90_FLAGBYTE) return offset + i;
 
 		i++;
 	}
 
-	return -1;
+	return GDL90_SIZE_INVALID;
 }
 
 gdl90_id_t gdl90_id(const gdl90_t gdl) {
