@@ -199,6 +199,40 @@ gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size) {
 	return gdl;
 }
 
+static gdl90_size_t gdl90_find_flagbyte(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_size_t offset) {
+	gdl90_size_t i = 0;
+
+	while(true) {
+		if(offset + i >= size) return -1;
+
+		if(buffer[offset + i] == GDL90_FLAGBYTE) return offet + i;
+
+		i++:
+	}
+
+	return -1;
+}
+
+gdl90_t gdl90_create_buffer(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_size_t* pos) {
+	const gdl90_byte_t* start = NULL;
+	const gdl90_byte_t* end = NULL;
+	gdl90_size_t i = 0;
+
+	/* This is the first time the function has been called. Find the first FLAGBYTE-delimited
+	 * message data. */
+	if(!pos) {
+		i = gdl90_find_flagbyte(buffer, size, pos);
+
+		if(i < 0) return NULL;
+		
+		start = &buffer[i];
+	}
+
+	end = gdl90_find_flagbyte(buffer, size, start + 1);
+
+	return NULL;
+}
+
 void gdl90_destroy(gdl90_t gdl) {
 	if(gdl->data) free(gdl->data);
 
