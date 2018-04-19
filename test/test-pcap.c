@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
 
 	while((gdl = gdl90_create_buffer(data, size, &offset, GDL90_STRATUX_AHRS))) {
 		printf(
-			"Message %zu was gdl90_id(%s); next offset: %zu\n",
+			"Message %lu was gdl90_id(%s); next offset: %lu\n",
 			i,
 			gdl90_id_str(gdl90_id(gdl)),
 			offset

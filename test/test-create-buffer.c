@@ -29,7 +29,7 @@ static const gdl90_byte_t* TEST_CREATE_BUFFER = (const gdl90_byte_t*)(
 #define TEST_CREATE_BUFFER_SIZE (19 * 11)
 
 static void test_create_buffer_flagbyte(gdl90_size_t pos, gdl90_id_t ids) {
-	printf("GDL90_FLAGBYTE starting from pos %zu @ %zu\n", pos, gdl90_flagbyte(
+	printf("GDL90_FLAGBYTE starting from pos %lu @ %lu\n", pos, gdl90_flagbyte(
 		TEST_CREATE_BUFFER,
 		TEST_CREATE_BUFFER_SIZE,
 		pos,
@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
 		GDL90_ALL
 	))) {
 		printf(
-			"Message %zu was gdl90_id(%s); next offset: %zu\n",
+			"Message %lu was gdl90_id(%s); next offset: %lu\n",
 			i,
 			gdl90_id_str(gdl90_id(gdl)),
 			offset
