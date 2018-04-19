@@ -14,6 +14,8 @@ typedef uint8_t gdl90_byte_t;
 typedef int32_t gdl90_int_t;
 typedef float gdl90_float_t;
 
+/* These are values used through the library for identifying message types and for contructing
+ * bitflags for use in the various create routines. */
 #define GDL90_HEARTBEAT 0x0001
 #define GDL90_OWNSHIP 0x0002
 #define GDL90_GEOMTRIC 0x0004
@@ -28,11 +30,12 @@ typedef float gdl90_float_t;
 #define GDL90_FALSE 0
 #define GDL90_SIZE_INVALID SIZE_MAX /* 18446744073709551615 */
 
-/* Accepts a perfectly-packed buffer of GDL90 data and returns the appropriate data type. If the
- * message parsing process fails in any way, NULL is returned. */
+/* Accepts a perfectly-packed buffer of GDL90 data and returns a valid gdl90_t context as long as
+ * the GDL90_* value is included in the specified @ids variable. If the message parsing process
+ * fails in any way, NULL is returned. */
 gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_id_t ids);
 
-/* An iterative version of gdl90_create designed to by called in a loop to parse arbitrary buffers
+/* An iterative version of gdl90_create designed to be called in a loop to parse arbitrary buffers
  * of potential GDL90 data. The @offset variable must be initialized to 0 on the first call, as its
  * contents are used to keep track of the position within the buffer. */
 gdl90_t gdl90_create_buffer(
