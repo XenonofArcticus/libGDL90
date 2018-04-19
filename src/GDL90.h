@@ -7,6 +7,7 @@
 struct _gdl90_t;
 
 typedef struct _gdl90_t* gdl90_t;
+typedef uint16_t gdl90_crc_t;
 typedef uint32_t gdl90_bool_t;
 typedef uint32_t gdl90_id_t;
 typedef size_t gdl90_size_t;
@@ -30,6 +31,9 @@ typedef char gdl90_str_t;
 #define GDL90_TRUE 1
 #define GDL90_FALSE 0
 #define GDL90_SIZE_INVALID SIZE_MAX /* 18446744073709551615 */
+
+/* Returns the result of a 16bit CRC check against the passed-in @buffer. */
+gdl90_crc_t gdl90_crc(const gdl90_byte_t* buffer, gdl90_size_t size);
 
 /* Accepts a perfectly-packed buffer of GDL90 data and returns a valid gdl90_t context as long as
  * the GDL90_* value is included in the specified @ids variable. If the message parsing process

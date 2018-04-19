@@ -22,7 +22,6 @@ gdl90_byte_t* test_pcap_file(const gdl90_str_t* path, gdl90_size_t* size) {
 	return data;
 }
 
-
 int main(int argc, char** argv) {
 	gdl90_t gdl = NULL;
 	gdl90_size_t offset = 0;
@@ -42,18 +41,15 @@ int main(int argc, char** argv) {
 		return 2;
 	}
 
-	while((gdl = gdl90_create_buffer(data, size, &offset, GDL90_STRATUX_AHRS))) {
-		printf(
-			"Message %lu was gdl90_id(%s); next offset: %lu\n",
-			i,
-			gdl90_id_str(gdl90_id(gdl)),
-			offset
-		);
+	while((gdl = gdl90_create_buffer(data, size, &offset, GDL90_HEARTBEAT | GDL90_OWNSHIP))) {
+		printf("%04lu: %s\n", i, gdl90_id_str(gdl90_id(gdl)));
 
 		gdl90_destroy(gdl);
 
 		i++;
 	}
+
+	free(data);
 
 	return 0;
 }

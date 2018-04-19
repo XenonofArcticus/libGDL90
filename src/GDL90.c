@@ -3,8 +3,6 @@
 #include <string.h>
 #include <float.h>
 
-typedef uint16_t gdl90_crc_t;
-
 static gdl90_crc_t GDL90_CRC[] = {
 	0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
 	0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF,
@@ -62,7 +60,7 @@ static void gdl90_crc_init() {
 }
 #endif
 
-static gdl90_crc_t gdl90_crc(const gdl90_byte_t* buffer, gdl90_size_t size) {
+gdl90_crc_t gdl90_crc(const gdl90_byte_t* buffer, gdl90_size_t size) {
 	gdl90_size_t i;
 	gdl90_crc_t crc = 0;
 
@@ -91,7 +89,6 @@ static gdl90_crc_t gdl90_crc(const gdl90_byte_t* buffer, gdl90_size_t size) {
 struct _gdl90_t {
 	gdl90_int_t id;
 	gdl90_byte_t* data;
-	/* TODO: Add gdl90_err_t for error reporting. */
 };
 
 /* Processes a buffer of data according to section 2.2.1 of the spec. The "byte-stuffed" characters
@@ -101,25 +98,33 @@ static gdl90_byte_t* gdl90_create_data(
 	gdl90_size_t size,
 	gdl90_size_t id_size
 ) {
-	gdl90_byte_t* data = malloc(id_size);
-	gdl90_crc_t crc = *((gdl90_crc_t*)(&buffer[size - 3]));
+	/* Allocate enough space for our payload PLUS the CRC, but __NOT__ the GDL90_FLAGBYTE value.
+	 * The the CRC can actually have bytestuffed values in it. */
+	gdl90_byte_t* data = malloc(id_size + 2);
+	gdl90_crc_t crc = 0;
 	gdl90_size_t i = 0;
 	gdl90_size_t c = 0;
 
+	/* printf("gdl90_create_data.size = %lu\n", size); */
+
 	/* If a FLAGBYTE or ESCAPEBYTE is included in the payload, this process will extract them
 	 * properly using the technique described in the spec on page 5. */
-	while(i < size - 4) {
-		if(buffer[1 + i] == GDL90_ESCAPEBYTE) {
-			data[c] = buffer[2 + i] ^ 0x20;
+	while(i < size - 2) {
+		if(c >= id_size + 2) break;
+
+		if(buffer[i + 1] == GDL90_ESCAPEBYTE) {
+			data[c] = buffer[i + 2] ^ 0x20;
 
 			i++;
 		}
 
-		else data[c] = buffer[1 + i];
+		else data[c] = buffer[i + 1];
 
 		i++;
 		c++;
 	}
+
+	crc = *((gdl90_crc_t*)(&data[id_size]));
 
 	/* If the CRC fails, free the allocated memory and set the returned pointer to NULL. */
 	if(crc != gdl90_crc(data, id_size)) {
@@ -176,11 +181,17 @@ gdl90_t gdl90_create_buffer(
 ) {
 	gdl90_size_t start;
 
+	/* printf("gdl90_create_buffer.offset = %lu\n", *offset); */
+
 	if((start = gdl90_flagbyte(buffer, size, *offset, ids)) != GDL90_SIZE_INVALID) {
 		gdl90_size_t end;
 
+		/* printf("  >> gdl90_create_buffer.start = %lu\n", start); */
+
 		if((end = gdl90_flagbyte(buffer, size, start + 1, GDL90_FALSE)) != GDL90_SIZE_INVALID) {
 			*offset = end + 1;
+
+			/* printf("  >> gdl90_create_buffer.end = %lu\n", end); */
 
 			return gdl90_create(&buffer[start], (end - start) + 1, ids);
 		}
