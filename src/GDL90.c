@@ -1,6 +1,5 @@
 #include "GDL90.h"
 
-#include <stdio.h>
 #include <string.h>
 #include <float.h>
 
@@ -121,9 +120,6 @@ typedef struct _gdl90_heartbeat_t {
 		gdl90_bit_t time_stamp : 1;
 	} status2;
 } gdl90_heartbeat_t;
-
-/* Status Type Address Latitude Longitude Altitude Misc NavIntegrityCat NavAccuracyCat
- * HVelocity VVelocity TrackHeading EmitterCat CallSign Code */
 #endif
 
 /* Processes a buffer of data according to section 2.2.1 of the spec. The "byte-stuffed" characters
@@ -208,10 +204,10 @@ gdl90_t gdl90_create_buffer(
 ) {
 	gdl90_size_t start;
 
-	if((start = gdl90_flagbyte(buffer, size, *offset)) != GDL90_SIZE_INVALID) {
+	if((start = gdl90_flagbyte(buffer, size, *offset, ids)) != GDL90_SIZE_INVALID) {
 		gdl90_size_t end;
 
-		if((end = gdl90_flagbyte(buffer, size, start + 1)) != GDL90_SIZE_INVALID) {
+		if((end = gdl90_flagbyte(buffer, size, start + 1, GDL90_FALSE)) != GDL90_SIZE_INVALID) {
 			*offset = end + 1;
 
 			return gdl90_create(&buffer[start], (end - start) + 1, ids);
@@ -249,12 +245,10 @@ gdl90_size_t gdl90_flagbyte(
 
 			if(
 				(b == GDL90_ID_HEARTBEAT && (ids & GDL90_HEARTBEAT)) ||
-			case GDL90_ID_UPLINK_DATA:
-			case GDL90_ID_OWNSHIP:
-			case GDL90_ID_TRAFFIC:
-			case GDL90_ID_STRATUX_HEARTBEAT0:
-			case GDL90_ID_STRATUX_HEARTBEAT1:
-			case GDL90_ID_STRATUX_AHRS:
+				(b == GDL90_ID_OWNSHIP && (ids & GDL90_OWNSHIP)) ||
+				(b == GDL90_ID_TRAFFIC && (ids & GDL90_TRAFFIC)) ||
+				(b == GDL90_ID_STRATUX_AHRS && (ids & GDL90_STRATUX_AHRS))
+			) return offset + i;
 		}
 
 		i++;
@@ -265,6 +259,30 @@ gdl90_size_t gdl90_flagbyte(
 
 gdl90_id_t gdl90_id(const gdl90_t gdl) {
 	return gdl->id;
+}
+
+gdl90_str_t gdl90_id_str(gdl90_id_t id) {
+	if(id == GDL90_HEARTBEAT) return "GDL90_HEARTBEAT";
+
+	else if(id == GDL90_OWNSHIP) return "GDL90_OWNSHIP";
+
+	else if(id == GDL90_TRAFFIC) return "GDL90_TRAFFIC";
+
+	else if(id == GDL90_STRATUX_AHRS) return "GDL90_STRATUX_AHRS";
+
+	else return "GDL90_FALSE";
+}
+
+gdl90_size_t gdl90_id_size(gdl90_id_t id) {
+	if(id == GDL90_HEARTBEAT) return GDL90_ID_HEARTBEAT_SIZE;
+
+	else if(id == GDL90_OWNSHIP) return GDL90_ID_OWNSHIP_SIZE;
+
+	else if(id == GDL90_TRAFFIC) return GDL90_ID_TRAFFIC_SIZE;
+
+	else if(id == GDL90_STRATUX_AHRS) return GDL90_ID_STRATUX_AHRS_SIZE;
+
+	else return GDL90_SIZE_INVALID;
 }
 
 static gdl90_int_t gdl90_uint24(const gdl90_byte_t* buffer) {

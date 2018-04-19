@@ -13,6 +13,7 @@ typedef size_t gdl90_size_t;
 typedef uint8_t gdl90_byte_t;
 typedef int32_t gdl90_int_t;
 typedef float gdl90_float_t;
+typedef const char* gdl90_str_t;
 
 /* These are values used through the library for identifying message types and for contructing
  * bitflags for use in the various create routines. */
@@ -48,12 +49,22 @@ gdl90_t gdl90_create_buffer(
 /* Frees the memory used by the opaque gdl90_t. */
 void gdl90_destroy(gdl90_t gdl);
 
-/* Returns one of the GDL90_* defines above (lines 17-22). If some kind of internal error has
+/* Returns one of the GDL90_* defines above (lines 20-25). If some kind of internal error has
  * occurred, zero is returned. */
 gdl90_id_t gdl90_id(const gdl90_t gdl);
 
+/* Returns the string name of the GDL90_* id/constant. */
+gdl90_str_t gdl90_id_str(gdl90_id_t id);
+
+/* Returns the size of the message payload for the corresponding GDL90_* id, minus the two
+ * GDL90_FLAGBYTE characters and the 2-byte CRC value. */
+gdl90_size_t gdl90_id_size(gdl90_id_t id);
+
 /* Returns the numeric index of the first GDL90_FLAGBYTE detected in the specified buffer, starting
- * at the indicated @offset. Returns GDL90_SIZE_INVALID if none are detected. */
+ * at the indicated @offset. If the @ids argument includes any of the GDL90_* message bitflags, a
+ * valid index will be returned if the subsequent byte AFTER the detected FLAGBYTE matches. If
+ * GDL90_FALSE is passed as the @ids argument, this function returns immediately after finding the
+ * first FLAGBYTE. Returns GDL90_SIZE_INVALID on failure. */
 gdl90_size_t gdl90_flagbyte(
 	const gdl90_byte_t* buffer,
 	gdl90_size_t size,
