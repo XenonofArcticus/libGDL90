@@ -48,3 +48,6 @@ TARGET_LINK_LIBRARIES(gdl90-test-ahrs libGDL90)
 
 ADD_EXECUTABLE(gdl90-test-create-buffer "test/test-create-buffer.c")
 TARGET_LINK_LIBRARIES(gdl90-test-create-buffer libGDL90)
+
+ADD_EXECUTABLE(gdl90-test-pcap "test/test-pcap.c")
+TARGET_LINK_LIBRARIES(gdl90-test-pcap libGDL90)
