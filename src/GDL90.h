@@ -13,7 +13,7 @@ typedef size_t gdl90_size_t;
 typedef uint8_t gdl90_byte_t;
 typedef int32_t gdl90_int_t;
 typedef float gdl90_float_t;
-typedef const char* gdl90_str_t;
+typedef char gdl90_str_t;
 
 /* These are values used through the library for identifying message types and for contructing
  * bitflags for use in the various create routines. */
@@ -54,7 +54,7 @@ void gdl90_destroy(gdl90_t gdl);
 gdl90_id_t gdl90_id(const gdl90_t gdl);
 
 /* Returns the string name of the GDL90_* id/constant. */
-gdl90_str_t gdl90_id_str(gdl90_id_t id);
+const gdl90_str_t* gdl90_id_str(gdl90_id_t id);
 
 /* Returns the size of the message payload for the corresponding GDL90_* id, minus the two
  * GDL90_FLAGBYTE characters and the 2-byte CRC value. */

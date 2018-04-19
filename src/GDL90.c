@@ -261,7 +261,7 @@ gdl90_id_t gdl90_id(const gdl90_t gdl) {
 	return gdl->id;
 }
 
-gdl90_str_t gdl90_id_str(gdl90_id_t id) {
+const gdl90_str_t* gdl90_id_str(gdl90_id_t id) {
 	if(id == GDL90_HEARTBEAT) return "GDL90_HEARTBEAT";
 
 	else if(id == GDL90_OWNSHIP) return "GDL90_OWNSHIP";
