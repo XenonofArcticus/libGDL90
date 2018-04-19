@@ -1,5 +1,6 @@
 #include "GDL90.h"
 
+#include <stdio.h>
 #include <string.h>
 #include <float.h>
 
@@ -162,7 +163,7 @@ static gdl90_byte_t* gdl90_create_data(
 	return data;
 }
 
-gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size) {
+gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_id_t ids) {
 	gdl90_t gdl = NULL;
 
 	if(buffer[0] != GDL90_FLAGBYTE || buffer[size - 1] != GDL90_FLAGBYTE) return NULL;
@@ -172,25 +173,25 @@ gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size) {
 	gdl->id = GDL90_FALSE;
 	gdl->data = NULL;
 
-	if(buffer[1] == GDL90_ID_HEARTBEAT) {
+	if(buffer[1] == GDL90_ID_HEARTBEAT && (ids & GDL90_HEARTBEAT)) {
 		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_HEARTBEAT_SIZE);
 
 		if(gdl->data) gdl->id = GDL90_HEARTBEAT;
 	}
 
-	else if(buffer[1] == GDL90_ID_OWNSHIP) {
+	else if(buffer[1] == GDL90_ID_OWNSHIP && (ids & GDL90_OWNSHIP)) {
 		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_OWNSHIP_SIZE);
 
 		if(gdl->data) gdl->id = GDL90_OWNSHIP;
 	}
 
-	else if(buffer[1] == GDL90_ID_TRAFFIC) {
+	else if(buffer[1] == GDL90_ID_TRAFFIC && (ids & GDL90_TRAFFIC)) {
 		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_TRAFFIC_SIZE);
 
 		if(gdl->data) gdl->id = GDL90_TRAFFIC;
 	}
 
-	else if(buffer[1] == GDL90_ID_STRATUX_AHRS) {
+	else if(buffer[1] == GDL90_ID_STRATUX_AHRS && (ids & GDL90_STRATUX_AHRS)) {
 		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_STRATUX_AHRS_SIZE);
 
 		if(gdl->data) gdl->id = GDL90_STRATUX_AHRS;
@@ -199,36 +200,23 @@ gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size) {
 	return gdl;
 }
 
-static gdl90_size_t gdl90_find_flagbyte(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_size_t offset) {
-	gdl90_size_t i = 0;
+gdl90_t gdl90_create_buffer(
+	const gdl90_byte_t* buffer,
+	gdl90_size_t size,
+	gdl90_size_t* offset,
+	gdl90_id_t ids
+) {
+	gdl90_size_t start;
 
-	while(true) {
-		if(offset + i >= size) return -1;
+	if((start = gdl90_flagbyte(buffer, size, *offset)) != GDL90_SIZE_INVALID) {
+		gdl90_size_t end;
 
-		if(buffer[offset + i] == GDL90_FLAGBYTE) return offet + i;
+		if((end = gdl90_flagbyte(buffer, size, start + 1)) != GDL90_SIZE_INVALID) {
+			*offset = end + 1;
 
-		i++:
+			return gdl90_create(&buffer[start], (end - start) + 1, ids);
+		}
 	}
-
-	return -1;
-}
-
-gdl90_t gdl90_create_buffer(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_size_t* pos) {
-	const gdl90_byte_t* start = NULL;
-	const gdl90_byte_t* end = NULL;
-	gdl90_size_t i = 0;
-
-	/* This is the first time the function has been called. Find the first FLAGBYTE-delimited
-	 * message data. */
-	if(!pos) {
-		i = gdl90_find_flagbyte(buffer, size, pos);
-
-		if(i < 0) return NULL;
-		
-		start = &buffer[i];
-	}
-
-	end = gdl90_find_flagbyte(buffer, size, start + 1);
 
 	return NULL;
 }
@@ -237,6 +225,20 @@ void gdl90_destroy(gdl90_t gdl) {
 	if(gdl->data) free(gdl->data);
 
 	free(gdl);
+}
+
+gdl90_size_t gdl90_flagbyte(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_size_t offset) {
+	gdl90_size_t i = 0;
+
+	while(GDL90_TRUE) {
+		if(offset + i >= size) return -1;
+
+		if(buffer[offset + i] == GDL90_FLAGBYTE) return offset + i;
+
+		i++;
+	}
+
+	return -1;
 }
 
 gdl90_id_t gdl90_id(const gdl90_t gdl) {

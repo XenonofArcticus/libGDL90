@@ -44,7 +44,7 @@ static test_ownship_t TEST_OWNSHIP[2] = {
 };
 
 static void test_ownship(const test_ownship_t* to) {
-	gdl90_t gdl = gdl90_create(to->data, to->size);
+	gdl90_t gdl = gdl90_create(to->data, to->size, GDL90_ALL);
 
 	if(gdl90_id(gdl) == GDL90_OWNSHIP) {
 		printf("gdl90_latitude = %2.2f (%d)\n", gdl90_latitude(gdl), to->latitude);

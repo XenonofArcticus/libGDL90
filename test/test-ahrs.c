@@ -14,7 +14,7 @@ static test_ahrs_t TEST_AHRS[3] = {
 };
 
 static void test_ahrs(const test_ahrs_t* ta) {
-	gdl90_t gdl = gdl90_create(ta->data, ta->size);
+	gdl90_t gdl = gdl90_create(ta->data, ta->size, GDL90_ALL);
 
 	if(gdl90_id(gdl) == GDL90_STRATUX_AHRS) {
 		printf("gdl90_ahrs_yaw = %d\n", gdl90_ahrs_yaw(gdl));

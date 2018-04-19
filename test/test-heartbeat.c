@@ -15,7 +15,7 @@ static gdl90_byte_t TEST_HEARTBEAT[] = {
 };
 
 int main(int argc, char** argv) {
-	gdl90_t gdl = gdl90_create(TEST_HEARTBEAT, sizeof(TEST_HEARTBEAT));
+	gdl90_t gdl = gdl90_create(TEST_HEARTBEAT, sizeof(TEST_HEARTBEAT), GDL90_ALL);
 
 	printf("gdl90_id = %d\n", gdl90_id(gdl));
 
