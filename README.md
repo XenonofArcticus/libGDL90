@@ -1,12 +1,14 @@
 libGDL90
 ========
 
-*UNDER ACTIVE DEVELOPMENT*
+*UNDER VERY ACTIVE DEVELOPMENT!*
 
 TODO
 ----
 
-* Support little and big-endianess.
 * Complete data query API.
-* Add routines to assist in parsing/submitting GDL90 data from
-  arbitrary buffers of data.
+* Add gdl90_error() and gdl90_error_str() functions.
+* Add gdl90_setup(), allowing the programmer to configure the
+  library in various way; particularly, allowing them to set
+  the memory management/allocation model.
+* Create a simple C++14 wrapper header.
