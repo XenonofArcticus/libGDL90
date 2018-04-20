@@ -91,6 +91,29 @@ struct _gdl90_t {
 	gdl90_byte_t* data;
 };
 
+#if 0
+typedef struct _gdl90_static_t {
+	struct _gdl90_t gdl;
+	gdl90_bool_t locked;
+} gdl90_static_t;
+
+#define GDL90_STATIC_T(id) \
+	static gdl90_static_t GDL90_STATIC_##id = { { GDL90_##id, NULL }, GDL90_FALSE };
+
+GDL90_STATIC_T(HEARTBEAT)
+GDL90_STATIC_T(OWNSHIP)
+GDL90_STATIC_T(TRAFFIC)
+GDL90_STATIC_T(STRATUX_AHRS)
+
+static gdl90_bool_t GDL90_STATIC_ACTIVE = GDL90_FALSE;
+
+void gld90_init(gdl90_bool_t static_memory) {
+	GDL90_STATIC_ACTIVE = GDL90_TRUE;
+
+	GDL90_STATIC_HEARTBEAT.gdl.data = (gdl90_byte_t*)(malloc(GDL90_ID_HEARTBEAT_SIZE + 2));
+}
+#endif
+
 /* Processes a buffer of data according to section 2.2.1 of the spec. The "byte-stuffed" characters
  * are removed and a CRC (FCS) is performed on the resultant, cleared data. */
 static gdl90_byte_t* gdl90_create_data(
