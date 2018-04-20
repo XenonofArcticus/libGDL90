@@ -88,44 +88,104 @@ gdl90_crc_t gdl90_crc(gdl90_buffer_t buffer, gdl90_size_t size) {
 struct _gdl90_t {
 	gdl90_int_t id;
 	gdl90_byte_t* data;
+	gdl90_err_t err;
 };
 
-#if 0
 typedef struct _gdl90_static_t {
 	struct _gdl90_t gdl;
 	gdl90_bool_t locked;
 } gdl90_static_t;
 
-#define GDL90_STATIC_T(id) \
-	static gdl90_static_t GDL90_STATIC_##id = { { GDL90_##id, NULL }, GDL90_FALSE };
+#define GDL90_STATIC_CREATE(id) \
+	static gdl90_static_t GDL90_STATIC_##id = { \
+		{ GDL90_##id, NULL, GDL90_ERR_NONE }, \
+		GDL90_FALSE \
+	};
 
-GDL90_STATIC_T(HEARTBEAT)
-GDL90_STATIC_T(OWNSHIP)
-GDL90_STATIC_T(TRAFFIC)
-GDL90_STATIC_T(STRATUX_AHRS)
+#define GDL90_STATIC_CREATE_DATA(id) \
+	if(!GDL90_STATIC_##id.gdl.data) { \
+		GDL90_STATIC_##id.gdl.data = (gdl90_byte_t*)(malloc(GDL90_ID_##id##_SIZE + 2)); \
+	}
+
+GDL90_STATIC_CREATE(FALSE)
+GDL90_STATIC_CREATE(HEARTBEAT)
+GDL90_STATIC_CREATE(OWNSHIP)
+GDL90_STATIC_CREATE(TRAFFIC)
+GDL90_STATIC_CREATE(STRATUX_AHRS)
+
+static void gdl90_init(gdl90_t gdl) {
+	gdl->id = GDL90_FALSE;
+	gdl->data = NULL;
+	gdl->err = GDL90_ERR_NONE;
+}
 
 static gdl90_create_t GDL90_CREATE_MODE = GDL90_CREATE_MALLOC;
 
 void gdl90_setup(gdl90_create_t create) {
 	GDL90_CREATE_MODE = create;
 
-	GDL90_STATIC_HEARTBEAT.gdl.data = (gdl90_byte_t*)(malloc(GDL90_ID_HEARTBEAT_SIZE + 2));
+	GDL90_STATIC_CREATE_DATA(HEARTBEAT)
+	GDL90_STATIC_CREATE_DATA(OWNSHIP)
+	GDL90_STATIC_CREATE_DATA(TRAFFIC)
+	GDL90_STATIC_CREATE_DATA(STRATUX_AHRS)
 }
-#endif
 
-/* Processes a buffer of data according to section 2.2.1 of the spec. The "byte-stuffed" characters
- * are removed and a CRC (FCS) is performed on the resultant, cleared data. */
-static gdl90_byte_t* gdl90_create_data(
-	gdl90_buffer_t buffer,
-	gdl90_size_t size,
-	gdl90_size_t id_size
-) {
-	/* Allocate enough space for our payload PLUS the CRC, but __NOT__ the GDL90_FLAGBYTE values.
-	 * The the CRC can actually have bytestuffed values in it. */
-	gdl90_byte_t* data = malloc(id_size);
+void gdl90_shutdown() {
+}
+
+gdl90_id_t gdl90_id_flag(gdl90_byte_t b) {
+	if(b == GDL90_ID_HEARTBEAT) return GDL90_HEARTBEAT;
+
+	else if(b == GDL90_ID_OWNSHIP) return GDL90_OWNSHIP;
+
+	else if(b == GDL90_ID_TRAFFIC) return GDL90_TRAFFIC;
+
+	else if(b == GDL90_ID_STRATUX_AHRS) return GDL90_STRATUX_AHRS;
+
+	else return GDL90_FALSE;
+}
+
+gdl90_id_t gdl90_flag_id(gdl90_byte_t b) {
+	if(b == GDL90_HEARTBEAT) return GDL90_ID_HEARTBEAT;
+
+	else if(b == GDL90_OWNSHIP) return GDL90_ID_OWNSHIP;
+
+	else if(b == GDL90_TRAFFIC) return GDL90_ID_TRAFFIC;
+
+	else if(b == GDL90_STRATUX_AHRS) return GDL90_ID_STRATUX_AHRS;
+
+	else return GDL90_FALSE;
+}
+
+#define gdl90_err_return(gdl, error) { \
+	gdl->id = GDL90_FALSE; \
+	gdl->err = GDL90_ERR_##error; \
+	return gdl; \
+}
+
+gdl90_t gdl90_create(gdl90_buffer_t buffer, gdl90_size_t size, gdl90_id_t ids) {
+	gdl90_t gdl = (gdl90_t)(&GDL90_STATIC_FALSE);
 	gdl90_crc_t crc = 0;
 	gdl90_size_t i = 0;
 	gdl90_size_t c = 0;
+	gdl90_size_t id_size = 0;
+
+	if(GDL90_CREATE_MODE == GDL90_CREATE_MALLOC) gdl = malloc(sizeof(struct _gdl90_t));
+
+	gdl90_init(gdl);
+
+	/* Make sure that the buffer begins with a valid GDL90_FLAGBYTE, followed by one or more of the
+	 * GDL90_* flag valuesi specified in the @ids argument. */
+	if(gdl90_flagbyte(buffer, size, 0, ids)) gdl90_err_return(gdl, FLAGBYTE_START);
+
+	/* Check to ensure the buffer ends with a GDL90_FLAGBYTE. */
+	if(buffer[size - 1] != GDL90_FLAGBYTE) gdl90_err_return(gdl, FLAGBYTE_END);
+
+	if(!(gdl->id = gdl90_id_flag(buffer[1]))) gdl90_err_return(gdl, ID_INVALID);
+
+	id_size = gdl90_id_size(gdl->id);
+
+	if(GDL90_CREATE_MODE == GDL90_CREATE_MALLOC) gdl->data = (gdl90_byte_t*)(malloc(id_size));
 
 	/* If a FLAGBYTE or ESCAPEBYTE is included in the payload, this process will extract them
 	 * properly using the technique described in the spec on page 5. */
@@ -133,63 +193,22 @@ static gdl90_byte_t* gdl90_create_data(
 		if(c >= id_size) break;
 
 		if(buffer[i + 1] == GDL90_ESCAPEBYTE) {
-			data[c] = buffer[i + 2] ^ 0x20;
+			gdl->data[c] = buffer[i + 2] ^ 0x20;
 
 			i++;
 		}
 
-		else data[c] = buffer[i + 1];
+		else gdl->data[c] = buffer[i + 1];
 
 		i++;
 		c++;
 	}
 
 	/* The precalculated CRC is the last 2 bytes at the end of the payload. */
-	crc = *((gdl90_crc_t*)(&data[id_size - 2]));
+	crc = *((gdl90_crc_t*)(&gdl->data[id_size - 2]));
 
 	/* Now calculate our CRC value using everything UP TO the 2 bytes. */
-	if(crc != gdl90_crc(data, id_size - 2)) {
-		free(data);
-
-		data = NULL;
-	}
-
-	return data;
-}
-
-gdl90_t gdl90_create(gdl90_buffer_t buffer, gdl90_size_t size, gdl90_id_t ids) {
-	gdl90_t gdl = NULL;
-
-	if(buffer[0] != GDL90_FLAGBYTE || buffer[size - 1] != GDL90_FLAGBYTE) return NULL;
-
-	gdl = malloc(sizeof(struct _gdl90_t));
-
-	gdl->id = GDL90_FALSE;
-	gdl->data = NULL;
-
-	if(buffer[1] == GDL90_ID_HEARTBEAT && (ids & GDL90_HEARTBEAT)) {
-		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_HEARTBEAT_SIZE);
-
-		if(gdl->data) gdl->id = GDL90_HEARTBEAT;
-	}
-
-	else if(buffer[1] == GDL90_ID_OWNSHIP && (ids & GDL90_OWNSHIP)) {
-		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_OWNSHIP_SIZE);
-
-		if(gdl->data) gdl->id = GDL90_OWNSHIP;
-	}
-
-	else if(buffer[1] == GDL90_ID_TRAFFIC && (ids & GDL90_TRAFFIC)) {
-		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_TRAFFIC_SIZE);
-
-		if(gdl->data) gdl->id = GDL90_TRAFFIC;
-	}
-
-	else if(buffer[1] == GDL90_ID_STRATUX_AHRS && (ids & GDL90_STRATUX_AHRS)) {
-		gdl->data = gdl90_create_data(buffer, size, GDL90_ID_STRATUX_AHRS_SIZE);
-
-		if(gdl->data) gdl->id = GDL90_STRATUX_AHRS;
-	}
+	if(crc != gdl90_crc(gdl->data, id_size - 2)) gdl90_err_return(gdl, CRC);
 
 	return gdl;
 }
@@ -281,6 +300,14 @@ gdl90_size_t gdl90_id_size(gdl90_id_t id) {
 	else if(id == GDL90_STRATUX_AHRS) return GDL90_ID_STRATUX_AHRS_SIZE;
 
 	else return GDL90_SIZE_INVALID;
+}
+
+gdl90_err_t gdl90_error(const gdl90_t gdl) {
+	return gdl->err;
+}
+
+gdl90_bool_t gdl90_valid(const gdl90_t gdl) {
+	return gdl->err == GDL90_ERR_NONE;
 }
 
 static gdl90_int_t gdl90_uint24(gdl90_buffer_t buffer) {
