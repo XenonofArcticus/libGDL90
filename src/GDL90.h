@@ -12,6 +12,7 @@ typedef uint32_t gdl90_bool_t;
 typedef uint32_t gdl90_id_t;
 typedef size_t gdl90_size_t;
 typedef uint8_t gdl90_byte_t;
+typedef const gdl90_byte_t* gdl90_buffer_t;
 typedef int32_t gdl90_int_t;
 typedef float gdl90_float_t;
 typedef char gdl90_str_t;
@@ -32,19 +33,26 @@ typedef char gdl90_str_t;
 #define GDL90_FALSE 0
 #define GDL90_SIZE_INVALID SIZE_MAX /* 18446744073709551615 */
 
+typedef enum _gdl90_create_t {
+	GDL90_CREATE_MALLOC,
+	GDL90_CREATE_STATIC
+} gdl90_create_t;
+
+void gdl90_setup(gdl90_create_t create);
+
 /* Returns the result of a 16bit CRC check against the passed-in @buffer. */
-gdl90_crc_t gdl90_crc(const gdl90_byte_t* buffer, gdl90_size_t size);
+gdl90_crc_t gdl90_crc(gdl90_buffer_t buffer, gdl90_size_t size);
 
 /* Accepts a perfectly-packed buffer of GDL90 data and returns a valid gdl90_t context as long as
  * the GDL90_* value is included in the specified @ids variable. If the message parsing process
  * fails in any way, NULL is returned. */
-gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_id_t ids);
+gdl90_t gdl90_create(gdl90_buffer_t buffer, gdl90_size_t size, gdl90_id_t ids);
 
 /* An iterative version of gdl90_create designed to be called in a loop to parse arbitrary buffers
  * of potential GDL90 data. The @offset variable must be initialized to 0 on the first call, as its
  * contents are used to keep track of the position within the buffer. */
 gdl90_t gdl90_create_buffer(
-	const gdl90_byte_t* buffer,
+	gdl90_buffer_t buffer,
 	gdl90_size_t size,
 	gdl90_size_t* offset,
 	gdl90_id_t ids
@@ -61,7 +69,7 @@ gdl90_id_t gdl90_id(const gdl90_t gdl);
 const gdl90_str_t* gdl90_id_str(gdl90_id_t id);
 
 /* Returns the size of the message payload for the corresponding GDL90_* id, minus the two
- * GDL90_FLAGBYTE characters and the 2-byte CRC value. */
+ * GDL90_FLAGBYTE characters that wrap the buffer. */
 gdl90_size_t gdl90_id_size(gdl90_id_t id);
 
 /* Returns the numeric index of the first GDL90_FLAGBYTE detected in the specified buffer, starting
@@ -70,7 +78,7 @@ gdl90_size_t gdl90_id_size(gdl90_id_t id);
  * GDL90_FALSE is passed as the @ids argument, this function returns immediately after finding the
  * first FLAGBYTE. Returns GDL90_SIZE_INVALID on failure. */
 gdl90_size_t gdl90_flagbyte(
-	const gdl90_byte_t* buffer,
+	gdl90_buffer_t buffer,
 	gdl90_size_t size,
 	gdl90_size_t offset,
 	gdl90_id_t ids

@@ -1,5 +1,6 @@
 #include "GDL90.h"
 
+#include <stdio.h>
 #include <string.h>
 #include <float.h>
 
@@ -60,7 +61,7 @@ static void gdl90_crc_init() {
 }
 #endif
 
-gdl90_crc_t gdl90_crc(const gdl90_byte_t* buffer, gdl90_size_t size) {
+gdl90_crc_t gdl90_crc(gdl90_buffer_t buffer, gdl90_size_t size) {
 	gdl90_size_t i;
 	gdl90_crc_t crc = 0;
 
@@ -69,22 +70,20 @@ gdl90_crc_t gdl90_crc(const gdl90_byte_t* buffer, gdl90_size_t size) {
 	return crc;
 }
 
-/* The *_SIZE values are the size of the unescaped data payload MINUS the leading FLAGBYTE, the
- * two ending CRC bytes, and the final, closing FLAGBYTE. */
 #define GDL90_FLAGBYTE 0x7E
 #define GDL90_ESCAPEBYTE 0x7D
 #define GDL90_ID_HEARTBEAT 0x00
-#define GDL90_ID_HEARTBEAT_SIZE 0x07
+#define GDL90_ID_HEARTBEAT_SIZE 0x09
 #define GDL90_ID_UPLINK_DATA 0x07
-#define GDL90_ID_UPLINK_DATA_SIZE 0x01BF /* 436 bytes */
+#define GDL90_ID_UPLINK_DATA_SIZE 0x01B6 /* 438 bytes */
 #define GDL90_ID_OWNSHIP 0x0A
-#define GDL90_ID_OWNSHIP_SIZE 0x1C /* 28 bytes */
+#define GDL90_ID_OWNSHIP_SIZE 0x1E /* 30 bytes */
 #define GDL90_ID_TRAFFIC 0x14
-#define GDL90_ID_TRAFFIC_SIZE 0x1C /* 28 bytes */
+#define GDL90_ID_TRAFFIC_SIZE 0x1E /* 30 bytes */
 #define GDL90_ID_STRATUX_HEARTBEAT0 0xCC
 #define GDL90_ID_STRATUX_HEARTBEAT1 0x5358
 #define GDL90_ID_STRATUX_AHRS 0x4C
-#define GDL90_ID_STRATUX_AHRS_SIZE 0x18 /* 24 bytes */
+#define GDL90_ID_STRATUX_AHRS_SIZE 0x1A /* 26 bytes */
 
 struct _gdl90_t {
 	gdl90_int_t id;
@@ -105,10 +104,10 @@ GDL90_STATIC_T(OWNSHIP)
 GDL90_STATIC_T(TRAFFIC)
 GDL90_STATIC_T(STRATUX_AHRS)
 
-static gdl90_bool_t GDL90_STATIC_ACTIVE = GDL90_FALSE;
+static gdl90_create_t GDL90_CREATE_MODE = GDL90_CREATE_MALLOC;
 
-void gld90_init(gdl90_bool_t static_memory) {
-	GDL90_STATIC_ACTIVE = GDL90_TRUE;
+void gdl90_setup(gdl90_create_t create) {
+	GDL90_CREATE_MODE = create;
 
 	GDL90_STATIC_HEARTBEAT.gdl.data = (gdl90_byte_t*)(malloc(GDL90_ID_HEARTBEAT_SIZE + 2));
 }
@@ -117,23 +116,21 @@ void gld90_init(gdl90_bool_t static_memory) {
 /* Processes a buffer of data according to section 2.2.1 of the spec. The "byte-stuffed" characters
  * are removed and a CRC (FCS) is performed on the resultant, cleared data. */
 static gdl90_byte_t* gdl90_create_data(
-	const gdl90_byte_t* buffer,
+	gdl90_buffer_t buffer,
 	gdl90_size_t size,
 	gdl90_size_t id_size
 ) {
-	/* Allocate enough space for our payload PLUS the CRC, but __NOT__ the GDL90_FLAGBYTE value.
+	/* Allocate enough space for our payload PLUS the CRC, but __NOT__ the GDL90_FLAGBYTE values.
 	 * The the CRC can actually have bytestuffed values in it. */
-	gdl90_byte_t* data = malloc(id_size + 2);
+	gdl90_byte_t* data = malloc(id_size);
 	gdl90_crc_t crc = 0;
 	gdl90_size_t i = 0;
 	gdl90_size_t c = 0;
 
-	/* printf("gdl90_create_data.size = %lu\n", size); */
-
 	/* If a FLAGBYTE or ESCAPEBYTE is included in the payload, this process will extract them
 	 * properly using the technique described in the spec on page 5. */
-	while(i < size - 2) {
-		if(c >= id_size + 2) break;
+	while(i < size) {
+		if(c >= id_size) break;
 
 		if(buffer[i + 1] == GDL90_ESCAPEBYTE) {
 			data[c] = buffer[i + 2] ^ 0x20;
@@ -147,10 +144,11 @@ static gdl90_byte_t* gdl90_create_data(
 		c++;
 	}
 
-	crc = *((gdl90_crc_t*)(&data[id_size]));
+	/* The precalculated CRC is the last 2 bytes at the end of the payload. */
+	crc = *((gdl90_crc_t*)(&data[id_size - 2]));
 
-	/* If the CRC fails, free the allocated memory and set the returned pointer to NULL. */
-	if(crc != gdl90_crc(data, id_size)) {
+	/* Now calculate our CRC value using everything UP TO the 2 bytes. */
+	if(crc != gdl90_crc(data, id_size - 2)) {
 		free(data);
 
 		data = NULL;
@@ -159,7 +157,7 @@ static gdl90_byte_t* gdl90_create_data(
 	return data;
 }
 
-gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_id_t ids) {
+gdl90_t gdl90_create(gdl90_buffer_t buffer, gdl90_size_t size, gdl90_id_t ids) {
 	gdl90_t gdl = NULL;
 
 	if(buffer[0] != GDL90_FLAGBYTE || buffer[size - 1] != GDL90_FLAGBYTE) return NULL;
@@ -197,24 +195,18 @@ gdl90_t gdl90_create(const gdl90_byte_t* buffer, gdl90_size_t size, gdl90_id_t i
 }
 
 gdl90_t gdl90_create_buffer(
-	const gdl90_byte_t* buffer,
+	gdl90_buffer_t buffer,
 	gdl90_size_t size,
 	gdl90_size_t* offset,
 	gdl90_id_t ids
 ) {
 	gdl90_size_t start;
 
-	/* printf("gdl90_create_buffer.offset = %lu\n", *offset); */
-
 	if((start = gdl90_flagbyte(buffer, size, *offset, ids)) != GDL90_SIZE_INVALID) {
 		gdl90_size_t end;
 
-		/* printf("  >> gdl90_create_buffer.start = %lu\n", start); */
-
 		if((end = gdl90_flagbyte(buffer, size, start + 1, GDL90_FALSE)) != GDL90_SIZE_INVALID) {
 			*offset = end + 1;
-
-			/* printf("  >> gdl90_create_buffer.end = %lu\n", end); */
 
 			return gdl90_create(&buffer[start], (end - start) + 1, ids);
 		}
@@ -230,7 +222,7 @@ void gdl90_destroy(gdl90_t gdl) {
 }
 
 gdl90_size_t gdl90_flagbyte(
-	const gdl90_byte_t* buffer,
+	gdl90_buffer_t buffer,
 	gdl90_size_t size,
 	gdl90_size_t offset,
 	gdl90_id_t ids
@@ -291,7 +283,7 @@ gdl90_size_t gdl90_id_size(gdl90_id_t id) {
 	else return GDL90_SIZE_INVALID;
 }
 
-static gdl90_int_t gdl90_uint24(const gdl90_byte_t* buffer) {
+static gdl90_int_t gdl90_uint24(gdl90_buffer_t buffer) {
 	gdl90_byte_t b0 = buffer[0];
 	gdl90_byte_t b1 = buffer[1];
 	gdl90_byte_t b2 = buffer[2];
@@ -299,7 +291,7 @@ static gdl90_int_t gdl90_uint24(const gdl90_byte_t* buffer) {
 	return (b0 << 16) + (b1 << 8) + b2;
 }
 
-static gdl90_int_t gdl90_int24(const gdl90_byte_t* buffer) {
+static gdl90_int_t gdl90_int24(gdl90_buffer_t buffer) {
 	gdl90_int_t val = gdl90_uint24(buffer);
 
 	if(val > 8388607) val -= 16777216;
@@ -307,14 +299,14 @@ static gdl90_int_t gdl90_int24(const gdl90_byte_t* buffer) {
 	return val;
 }
 
-static gdl90_int_t gdl90_uint16(const gdl90_byte_t* buffer) {
+static gdl90_int_t gdl90_uint16(gdl90_buffer_t buffer) {
 	gdl90_byte_t b0 = buffer[0];
 	gdl90_byte_t b1 = buffer[1];
 
 	return (b0 << 8) + b1;
 }
 
-static gdl90_int_t gdl90_int16(const gdl90_byte_t* buffer) {
+static gdl90_int_t gdl90_int16(gdl90_buffer_t buffer) {
 	gdl90_int_t val = gdl90_uint16(buffer);
 
 	if(val > 32767) val -= 65536;
