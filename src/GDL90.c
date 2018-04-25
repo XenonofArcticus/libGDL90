@@ -170,7 +170,7 @@ gdl90_t gdl90_create(gdl90_buffer_t buffer, gdl90_size_t size, gdl90_id_t ids) {
 	gdl90_size_t c = 0;
 	gdl90_size_t id_size = 0;
 
-	if(GDL90_CREATE_MODE == GDL90_CREATE_MALLOC) gdl = malloc(sizeof(struct _gdl90_t));
+	if(GDL90_CREATE_MODE == GDL90_CREATE_MALLOC) gdl = (gdl90_t)malloc(sizeof(struct _gdl90_t));
 
 	gdl90_init(gdl);
 
