@@ -175,7 +175,7 @@ gdl90_t gdl90_create(gdl90_buffer_t buffer, gdl90_size_t size, gdl90_id_t ids) {
 	gdl90_init(gdl);
 
 	/* Make sure that the buffer begins with a valid GDL90_FLAGBYTE, followed by one or more of the
-	 * GDL90_* flag valuesi specified in the @ids argument. */
+	 * GDL90_* flag values specified in the @ids argument. */
 	if(gdl90_flagbyte(buffer, size, 0, ids)) gdl90_err_return(gdl, FLAGBYTE_START);
 
 	/* Check to ensure the buffer ends with a GDL90_FLAGBYTE. */
@@ -260,12 +260,21 @@ gdl90_size_t gdl90_flagbyte(
 
 			b = buffer[offset + i + 1];
 
+			/* printf("gdl90_flagbyte.ids = %05X\n", ids);
+			printf("gdl90_flagbyte.b = %02X\n", b); */
+
 			if(
 				(b == GDL90_ID_HEARTBEAT && (ids & GDL90_HEARTBEAT)) ||
 				(b == GDL90_ID_OWNSHIP && (ids & GDL90_OWNSHIP)) ||
 				(b == GDL90_ID_TRAFFIC && (ids & GDL90_TRAFFIC)) ||
 				(b == GDL90_ID_STRATUX_AHRS && (ids & GDL90_STRATUX_AHRS))
-			) return offset + i;
+			) {
+				/* printf("RETURN\n"); */
+				
+				return offset + i;
+			}
+
+			/* else printf("UNRECOGNIZED!\n"); */
 		}
 
 		i++;
@@ -304,6 +313,20 @@ gdl90_size_t gdl90_id_size(gdl90_id_t id) {
 
 gdl90_err_t gdl90_error(const gdl90_t gdl) {
 	return gdl->err;
+}
+
+const gdl90_str_t* gdl90_error_str(gdl90_err_t err) {
+	if(err == GDL90_ERR_NONE) return "GDL90_ERR_NONE";
+
+	else if(err == GDL90_ERR_CRC) return "GDL90_ERR_CRC";
+
+	else if(err == GDL90_ERR_FLAGBYTE_START) return "GDL90_ERR_FLAGBYTE_START";
+
+	else if(err == GDL90_ERR_FLAGBYTE_END) return "GDL90_ERR_FLAGBYTE_END";
+
+	else if(err == GDL90_ERR_ID_INVALID) return "GDL90_ERR_ID_INVALID";
+
+	else return "GDL90_ERR_INVALID";
 }
 
 gdl90_bool_t gdl90_valid(const gdl90_t gdl) {

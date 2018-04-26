@@ -28,7 +28,7 @@ typedef char gdl90_str_t;
 #define GDL90_GEOMTRIC 0x0004
 #define GDL90_TRAFFIC 0x0008
 #define GDL90_STRATUX_AHRS 0x0010
-#define GDL90_ALL 0xFFFF
+#define GDL90_ALL 0x1F
 
 /* The value used internally by the Stratux AHRS messages when some field is invalid. */
 #define GDL90_STRATUX_AHRS_INVALID 0x7FFF
@@ -89,6 +89,7 @@ gdl90_id_t gdl90_id_flag(gdl90_byte_t b);
 gdl90_id_t gdl90_flag_id(gdl90_byte_t b);
 
 gdl90_err_t gdl90_error(const gdl90_t gdl);
+const gdl90_str_t* gdl90_error_str(gdl90_err_t err);
 gdl90_bool_t gdl90_valid(const gdl90_t gdl);
 
 /* Returns the numeric index of the first GDL90_FLAGBYTE detected in the specified buffer, starting

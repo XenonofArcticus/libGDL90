@@ -5,7 +5,7 @@
 /* This is a chunk of data containing four valid GDL90_HEARTBEAT messages, some NULL/bogus bytes,
  * and a final GDL90_FLAGBYTE with NO ending FLAGBYTE to try and confuse things. */
 static const gdl90_byte_t* TEST_CREATE_BUFFER = (const gdl90_byte_t*)(
-	"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" /*   0 -  10 */
+	"\x7E\x4D\x00\x00\x00\x00\x00\x00\x00\x00\x00" /*   0 -  10 */
 	"\x7E\x00\x81\x41\xDB\xD0\x08\x02\xB3\x8B\x7E" /*  11 -  21 (VALID) */
 	"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" /*  22 -  32 */
 	"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" /*  33 -  43 */
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
 	}
 
 	test_create_buffer_flagbyte(11, GDL90_HEARTBEAT);
-	test_create_buffer_flagbyte(12, GDL90_ALL);
+	test_create_buffer_flagbyte(0, GDL90_ALL);
 	test_create_buffer_flagbyte(0, GDL90_STRATUX_AHRS);
 	test_create_buffer_flagbyte(187, GDL90_FALSE);
 

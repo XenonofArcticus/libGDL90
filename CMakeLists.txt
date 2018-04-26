@@ -51,3 +51,6 @@ TARGET_LINK_LIBRARIES(gdl90-test-create-buffer libGDL90)
 
 ADD_EXECUTABLE(gdl90-test-scan-file "test/test-scan-file.c")
 TARGET_LINK_LIBRARIES(gdl90-test-scan-file libGDL90)
+
+ADD_EXECUTABLE(gdl90-test-error "test/test-error.c")
+TARGET_LINK_LIBRARIES(gdl90-test-error libGDL90)
