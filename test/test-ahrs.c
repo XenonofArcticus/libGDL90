@@ -31,9 +31,9 @@ static void test_ahrs(const test_ahrs_t* ta) {
 
 	if(gdl) {
 		printf("gdl90_id_str = %s\n", gdl90_id_str(gdl90_id(gdl)));
-		printf(" >> gdl90_ahrs_yaw = %d\n", gdl90_ahrs_yaw(gdl));
-		printf(" >> gdl90_ahrs_pitch = %d\n", gdl90_ahrs_pitch(gdl));
-		printf(" >> gdl90_ahrs_roll = %d\n", gdl90_ahrs_roll(gdl));
+		printf(" >> gdl90_ahrs_yaw = %2.2f\n", gdl90_ahrs_yaw(gdl));
+		printf(" >> gdl90_ahrs_pitch = %2.2f\n", gdl90_ahrs_pitch(gdl));
+		printf(" >> gdl90_ahrs_roll = %2.2f\n", gdl90_ahrs_roll(gdl));
 	}
 
 	gdl90_destroy(gdl);

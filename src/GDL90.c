@@ -1,6 +1,5 @@
 #include "GDL90.h"
 
-#include <stdio.h>
 #include <string.h>
 #include <float.h>
 
@@ -170,7 +169,9 @@ gdl90_t gdl90_create(gdl90_buffer_t buffer, gdl90_size_t size, gdl90_id_t ids) {
 	gdl90_size_t c = 0;
 	gdl90_size_t id_size = 0;
 
-	if(GDL90_CREATE_MODE == GDL90_CREATE_MALLOC) gdl = (gdl90_t)malloc(sizeof(struct _gdl90_t));
+	if(GDL90_CREATE_MODE == GDL90_CREATE_MALLOC) gdl = (gdl90_t)(malloc(
+		sizeof(struct _gdl90_t)
+	));
 
 	gdl90_init(gdl);
 
@@ -223,11 +224,15 @@ gdl90_t gdl90_create_buffer(
 
 	if((start = gdl90_flagbyte(buffer, size, *offset, ids)) != GDL90_SIZE_INVALID) {
 		gdl90_size_t end;
+		
+		*offset = start + 1;
 
 		if((end = gdl90_flagbyte(buffer, size, start + 1, GDL90_FALSE)) != GDL90_SIZE_INVALID) {
-			*offset = end + 1;
+			gdl90_t gdl = gdl90_create(&buffer[start], (end - start) + 1, ids);
 
-			return gdl90_create(&buffer[start], (end - start) + 1, ids);
+			if(gdl90_valid(gdl)) *offset += end - start;
+
+			return gdl;
 		}
 	}
 
@@ -383,26 +388,39 @@ gdl90_int_t gdl90_altitude(const gdl90_t gdl) {
 	return val;
 }
 
-gdl90_int_t gdl90_ahrs_yaw(const gdl90_t gdl) {
-	if(gdl->id != GDL90_STRATUX_AHRS) return 0;
+/* The value used internally by the Stratux AHRS messages when some field is invalid. */
+#define GDL90_STRATUX_AHRS_INVALID 0x7FFF
 
-	return gdl90_int16(&gdl->data[12]);
+static gdl90_float_t gdl90_ahrs_int16_float(const gdl90_t gdl, gdl90_size_t offset) {
+	if(gdl->id != GDL90_STRATUX_AHRS) return FLT_MAX;
+
+	else {
+		gdl90_int_t val = gdl90_int16(&gdl->data[offset]);
+		
+		if(val == GDL90_STRATUX_AHRS_INVALID) return FLT_MAX;
+		
+		else return val / 10.0f;
+	}
 }
 
-gdl90_int_t gdl90_ahrs_pitch(const gdl90_t gdl) {
-	if(gdl->id != GDL90_STRATUX_AHRS) return 0;
-
-	return gdl90_int16(&gdl->data[6]);
+gdl90_float_t gdl90_ahrs_yaw(const gdl90_t gdl) {
+	return gdl90_ahrs_int16_float(gdl, 12);
 }
 
-gdl90_int_t gdl90_ahrs_roll(const gdl90_t gdl) {
-	if(gdl->id != GDL90_STRATUX_AHRS) return 0;
+gdl90_float_t gdl90_ahrs_pitch(const gdl90_t gdl) {
+	return gdl90_ahrs_int16_float(gdl, 6);
+}
 
-	return gdl90_int16(&gdl->data[4]);
+gdl90_float_t gdl90_ahrs_roll(const gdl90_t gdl) {
+	return gdl90_ahrs_int16_float(gdl, 4);
 }
 
 gdl90_int_t gdl90_ahrs_heading(const gdl90_t gdl) {
 	if(gdl->id != GDL90_STRATUX_AHRS) return 0;
 
 	return gdl90_int16(&gdl->data[8]);
+}
+
+gdl90_buffer_t gdl90_buffer(const gdl90_t gdl) {
+	return gdl->data;
 }

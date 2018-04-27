@@ -76,8 +76,7 @@ static void test_error(gdl90_size_t index) {
 int main(int argc, char** argv) {
 	gdl90_size_t i;
 
-	/* for(i = 0; i < TEST_ERROR_SIZE; i++) test_error(i); */
-	test_error(2);
+	for(i = 0; i < TEST_ERROR_SIZE; i++) test_error(i);
 
 	return 0;
 }

@@ -30,9 +30,6 @@ typedef char gdl90_str_t;
 #define GDL90_STRATUX_AHRS 0x0010
 #define GDL90_ALL 0x1F
 
-/* The value used internally by the Stratux AHRS messages when some field is invalid. */
-#define GDL90_STRATUX_AHRS_INVALID 0x7FFF
-
 #define GDL90_TRUE 1
 #define GDL90_FALSE 0
 #define GDL90_SIZE_INVALID SIZE_MAX /* 18446744073709551615 */
@@ -108,10 +105,13 @@ gdl90_float_t gdl90_latitude(const gdl90_t gdl);
 gdl90_float_t gdl90_longitude(const gdl90_t gdl);
 gdl90_int_t gdl90_altitude(const gdl90_t gdl);
 
-gdl90_int_t gdl90_ahrs_yaw(const gdl90_t gdl);
-gdl90_int_t gdl90_ahrs_pitch(const gdl90_t gdl);
-gdl90_int_t gdl90_ahrs_roll(const gdl90_t gdl);
+gdl90_float_t gdl90_ahrs_yaw(const gdl90_t gdl);
+gdl90_float_t gdl90_ahrs_pitch(const gdl90_t gdl);
+gdl90_float_t gdl90_ahrs_roll(const gdl90_t gdl);
 gdl90_int_t gdl90_ahrs_heading(const gdl90_t gdl);
+
+/* Returns a const pointer to the raw, underlying byte data used for the corresponding gdl90_t. */
+gdl90_buffer_t gdl90_buffer(const gdl90_t gdl);
 
 #ifdef  __cplusplus
 }

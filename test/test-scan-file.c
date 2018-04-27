@@ -42,12 +42,19 @@ int main(int argc, char** argv) {
 	}
 
 	while((gdl = gdl90_create_buffer(data, size, &offset, GDL90_ALL))) {
-		printf("%04lu: %s\n", i, gdl90_id_str(gdl90_id(gdl)));
+		gdl90_id_t id = gdl90_id(gdl);
 
-		if(gdl90_id(gdl) == GDL90_STRATUX_AHRS) {
-			printf(" >> yaw:   %d\n", gdl90_ahrs_yaw(gdl));
-			printf(" >> pitch: %d\n", gdl90_ahrs_pitch(gdl));
-			printf(" >> roll:  %d\n", gdl90_ahrs_roll(gdl));
+		printf("%04lu: %s\n", i, gdl90_id_str(id));
+
+		if(id == GDL90_STRATUX_AHRS) {
+			printf(" >> yaw:   %2.2f\n", gdl90_ahrs_yaw(gdl));
+			printf(" >> pitch: %2.2f\n", gdl90_ahrs_pitch(gdl));
+			printf(" >> roll:  %2.2f\n", gdl90_ahrs_roll(gdl));
+		}
+
+		else if(id == GDL90_OWNSHIP) {
+			printf(" >> lat:  %2.2f\n", gdl90_latitude(gdl));
+			printf(" >> long: %2.2f\n", gdl90_longitude(gdl));
 		}
 
 		gdl90_destroy(gdl);
