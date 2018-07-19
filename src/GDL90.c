@@ -380,7 +380,7 @@ gdl90_int_t gdl90_altitude(const gdl90_t gdl) {
 	gdl90_int_t val = 0;
 
 	if(gdl->id == GDL90_OWNSHIP || gdl->id != GDL90_TRAFFIC) {
-		val += gdl->data[11] << 4;
+		val += ((int32_t)(gdl->data[11])) << 4;
 		val += (gdl->data[12] & 0xF0) >> 4;
 		val = (val * 25) - 1000;
 	}
